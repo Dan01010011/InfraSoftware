@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#define NUM_CLIENTS 6
+#define NUM_CLIENTS 7
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t empty = PTHREAD_COND_INITIALIZER;
@@ -32,29 +32,27 @@ int main() {
 }
 
 
-void put(int threadid){
+int put(int threadid){
     int v = rand() % 5000;
     pthread_mutex_lock(&mutex);
-    printf("Cliente %d depositando: %d\n", threadid, v);
 
     // while(items == BUFFER_SIZE) {
     //     pthread_cond_wait(&empty, &mutex);
     
     // }
     *account[threadid] += v;
-    printf("Novo saldo: %d\n", *account[threadid]);
     
     // if(*account[threadid] == 1) { 
     //     pthread_cond_broadcast(&fill); 
     // }
         
-    pthread_mutex_unlock(&mutex); 
+    pthread_mutex_unlock(&mutex);
+    return v; 
 }
 
-void get(int threadid) {
+int get(int threadid) {
     int saque = rand() % 1000;
     pthread_mutex_lock(&mutex);
-    printf("Cliente %d sacando: %d\n", threadid, saque);
 
     if(saque > *account[threadid]) {
         printf("Saldo insuficiente\n");
@@ -66,11 +64,11 @@ void get(int threadid) {
     // }
   
     *account[threadid] -= saque;
-    printf("Novo saldo: %d\n", *account[threadid]);
   
     //if(items == BUFFER_SIZE - 1){ pthread_cond_signal(&empty); }
     
     pthread_mutex_unlock(&mutex);
+    return saque;
 }
 
 void *operations(void *threadid) {
@@ -79,10 +77,14 @@ void *operations(void *threadid) {
 
     switch(operation) {
         case 0: // Saque
-            get(*((int *) threadid));
+            printf("Cliente %d sacando: ", *((int*) threadid));
+            printf("%d\n", get(*((int *) threadid)));
+            printf("Novo saldo: %d\n", *account[*((int *) threadid)]);
             break;  
         case 1: // Depósito
-            put(*((int *) threadid));
+            printf("Cliente %d depositando: ", *((int*) threadid));
+            printf("%d\n", put(*((int *) threadid)));
+            printf("Novo saldo: %d\n", *account[*((int *) threadid)]);
             break;
         case 2: // Consultar Saldo
             pthread_mutex_lock(&mutex);
