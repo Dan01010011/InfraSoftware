@@ -1,54 +1,55 @@
+#define _XOPEN_SOURCE 600
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#define NUM_CLIENTS 3
 
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-int *account[NUM_CLIENTS];
+pthread_barrier_t barrier;
 
-void *operations(void *threadid);
+int A[2][2] = {2, 1, 5, 7};
+int b[] = {11, 12};
+int x[2] = {1, 1};
+
+void *Jacobi(void *threadid);
 
 
 int main() {
-    pthread_t threads[NUM_CLIENTS];
-    int *ids[NUM_CLIENTS];
-    int i;
+    int n;
+    scanf("%d", &n);
+    pthread_t threads[n];
+    int *ids[n];
+    pthread_barrier_init(&barrier, NULL, n);
 
-    for(i = 0; i < NUM_CLIENTS; i++) {
+    for(int i = 0; i < n; i++) {
         ids[i] = (int *) malloc(sizeof(int));
-        account[i] = (int *) malloc(sizeof(int));
         *ids[i] = i;
-        *account[i] = 1000;
-        pthread_create(&threads[i], NULL, operations, (void *) ids[i]);
+        pthread_create(&threads[i], NULL, Jacobi, (void *) ids[i]);
     }
-    for(int i = 0; i < NUM_CLIENTS; i++) {
+    for(int i = 0; i < n; i++) {
         pthread_join(threads[i], NULL);
     }
 
+    pthread_barrier_destroy(&barrier);
     pthread_exit(NULL);
 }
 
 
-void *operations(void *threadid) {
-    int operation;
-    printf("Bem-vindo, Cliente %d. Qual operação deseja realizar?\n1. Saque\n2. Depósito\n3. Consultar Saldo\n.: ", *((int *) threadid));
-    scanf("%d", &operation);
-    pthread_mutex_lock(&mutex);
+void *Jacobi(void *threadid) {
+    int k = 0;
 
-    switch(operation) {
-        case 1: // Saque
-            int saque;
-            printf("Valor do saque: ");
-            scanf("%d", &saque);
-        
-        case 2: // Depósito
+    while(k < 10) {
+        for(int i = 0; i < 2; i++) {
+            int sum;
+            for(int j = 1; j < 3; j++) {
+                if(j != i) {
+                    sum = A[i][j] * x[j];
+                }
+            }
+            printf("%d\n")
+            x[i] = (1/A[i][i]) * (b[i] - sum); //x[i] no tempo k+1
+            printf("No tempo %d, Thread %d calculou que x[%d] = %d\n", k+1, *((int *)threadid), i, x[i]);
+        }
 
-        case 3: // Consultar Saldo
-
-        default:
-
+        pthread_barrier_wait(&barrier);
+        k++;
     }
-
-    pthread_mutex_unlock(&mutex);
-    pthread_exit(NULL);
 }
