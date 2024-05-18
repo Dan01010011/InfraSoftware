@@ -1,9 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#define n 7
+#define n 2
+#define NUM_THREADS 30
 
-int numThreads = 0; // Numero de threads esperando na lista de execucao
+int threads_exe = 0; // Numero de threads em execucao
+int list = 0; // Numero de threads esperando na lista/fila de execução
+int executadas = 0;
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t lista_pronto = PTHREAD_COND_INITIALIZER;
@@ -16,11 +19,11 @@ void *selecionar();
 
 
 int main() {
-    pthread_t threads[n];
+    pthread_t threads[NUM_THREADS];
     pthread_t escalonador;
-    int *ids[n];
+    int *ids[NUM_THREADS];
 
-    for(int i = 0; i < n; i++) {
+    for(int i = 0; i < NUM_THREADS; i++) {
         ids[i] = (int *) malloc(sizeof(int));
         *ids[i] = i;
         pthread_create(&threads[i], NULL, thread_code, (void *) ids[i]);
@@ -28,25 +31,37 @@ int main() {
     
     pthread_create(&escalonador, NULL, escalonar, NULL);
 
-    for(int i = 0; i < n; i++) {
+    for(int i = 0; i < NUM_THREADS; i++) {
         pthread_join(threads[i], NULL); 
     }
     pthread_join(escalonador, NULL);
 
-    //pthread_exit(NULL);
+    pthread_exit(NULL);
 }
 
 
 void *thread_code(void *threadid) {
-    for(int i = 0; i < n; i++) {
-        agendar(threadid);
+    list++;
+    agendar(threadid);
+    int i = 0;
+
+    while(i < 10000) {
+        i++;
+    }
+
+    threads_exe--;
+    executadas++;
+    printf("Thread %d terminou\n", *((int *) threadid));
+
+    if(executadas == NUM_THREADS) {
+        pthread_cond_signal(&vazia);
     }
 
     pthread_exit(NULL);
 }
 
 void *escalonar() {
-    for(int i = 0; i < n; i++) {
+    while(executadas != NUM_THREADS) {
         selecionar();
     }
 
@@ -56,14 +71,16 @@ void *escalonar() {
 void *agendar(void *threadid) {
     pthread_mutex_lock(&mutex);
 
-    while(numThreads == n) {    
+    while(threads_exe == n) {
+        printf("Numero maximo de threads em execução atingindo\n");
         pthread_cond_wait(&lista_pronto, &mutex);
     }
 
+    list--;
+    threads_exe++;
     printf("Thread %d em execução\n", *((int *)threadid));
-    numThreads++;
-
-    if(numThreads == 1) {
+        
+    if(list == 1) {
         pthread_cond_signal(&vazia);
     }
 
@@ -73,15 +90,12 @@ void *agendar(void *threadid) {
 void *selecionar() {
     pthread_mutex_lock(&mutex);
 
-    while(numThreads == 0) {
+    while((list == 0) && (executadas != NUM_THREADS)) {
+        printf("Escalonador dormindo\n");
         pthread_cond_wait(&vazia, &mutex);
     }
 
-    numThreads--;
-
-    if(numThreads == n - 1) {
-        pthread_cond_broadcast(&lista_pronto);
-    }
-
+    pthread_cond_broadcast(&lista_pronto);
+    
     pthread_mutex_unlock(&mutex);
 }
