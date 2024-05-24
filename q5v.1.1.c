@@ -1,6 +1,6 @@
 #define _XOPEN_SOURCE 600
 #define n 2
-#define I 2
+#define I 3
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -55,10 +55,12 @@ void *Jacobi(void *threadid) {
         
         iterator = 0;
         pthread_barrier_wait(&barrier); // Espera todas as threads
+
+        while(iterator < I) {
             pthread_mutex_lock(&mutex);
             iterator++;
             pthread_mutex_unlock(&mutex);
-
+        
             // Metodo de Jacobi
             float sum = 0;
             for(int j = 0; j < I; j++) {
@@ -69,10 +71,10 @@ void *Jacobi(void *threadid) {
                 
             x[iterator-1] = ((b[iterator-1] - sum) / (A[iterator-1][iterator-1])); // x[i] no tempo k+1
             printf("No tempo %d, Thread %d calculou que x[%d] = %.4f\n", k+1, *((int *)threadid), iterator-1, x[iterator-1]);
-        
+        }
 
         pthread_barrier_wait(&barrier); // Espera todas as threads        
-        //iterator = 0;
+
         k++;
     }
 }
